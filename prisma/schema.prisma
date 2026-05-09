@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  user
+  admin
+}
+
+enum SeverityLevel {
+  low
+  medium
+  high
+  extreme
+}
+
+enum FloodStatus {
+  active
+  surging
+  receded
+}
+
+enum RoadAccess {
+  passable
+  motorcycle_only
+  difficult
+  impassable
+}
+
+enum WaterCurrent {
+  calm
+  slow
+  moderate
+  fast
+}
+
+enum VoteType {
+  confirm
+  reject
+}
+
+enum NotificationType {
+  alert
+  report_update
+  verification
+  system
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+  extreme
+}
+
+// ─────────────────────────────────────────────
+// TABLES
+// ─────────────────────────────────────────────
+
+model User {
+  id               Int      @id @default(autoincrement())
+  name             String   @db.VarChar(100)
+  email            String   @unique @db.VarChar(255)
+  password         String   @db.VarChar(255)
+  phone            String?  @db.VarChar(20)
+  avatar           String?  @db.VarChar(500)
+  role             Role     @default(user)
+  reputationScore  Int      @default(0) @map("reputation_score")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // relations
+  reports       FloodReport[]
+  verifications ReportVerification[]
+  updates       ReportUpdate[]
+  photos        ReportPhoto[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model District {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique @db.VarChar(100)
+  latitude  Float
+  longitude Float
+
+  reports   FloodReport[]
+  floodZone FloodZone?
+
+  @@map("districts")
+}
+
+model FloodReport {
+  id          Int    @id @default(autoincrement())
+  userId      Int    @map("user_id")
+  districtId  Int?   @map("district_id")
+
+  title       String @db.VarChar(255)
+  description String @db.Text
+
+  latitude    Float
+  longitude   Float
+  address     String? @db.VarChar(500)
+
+  waterDepthCm   Int           @map("water_depth_cm")
+  severityLevel  SeverityLevel @map("severity_level")
+  roadAccess     RoadAccess    @map("road_access")
+  waterCurrent   WaterCurrent  @default(calm) @map("water_current")
+
+  status         FloodStatus @default(active)
+  photoUrl       String?     @map("photo_url") @db.VarChar(500)
+
+  confidenceScore Decimal @default(0) @map("confidence_score") @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // relations
+  user          User                 @relation(fields: [userId], references: [id])
+  district      District?            @relation(fields: [districtId], references: [id])
+  verifications ReportVerification[]
+  updates       ReportUpdate[]
+  photos        ReportPhoto[]
+
+  @@index([status])
+  @@index([severityLevel])
+  @@index([districtId])
+  @@index([userId])
+  @@index([latitude, longitude])
+  @@map("flood_reports")
+}
+
+model ReportVerification {
+  id       Int      @id @default(autoincrement())
+  reportId Int      @map("report_id")
+  userId   Int      @map("user_id")
+  vote     VoteType
+  comment  String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  report FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id])
+
+  @@unique([userId, reportId])
+  @@index([reportId])
+  @@map("report_verifications")
+}
+
+model ReportUpdate {
+  id           Int         @id @default(autoincrement())
+  reportId     Int         @map("report_id")
+  createdBy    Int         @map("created_by")
+  waterDepthCm Int         @map("water_depth_cm")
+  status       FloodStatus
+  description  String?     @db.Text
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  report FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [createdBy], references: [id])
+
+  @@index([reportId])
+  @@map("report_updates")
+}
+
+model ReportPhoto {
+  id         Int      @id @default(autoincrement())
+  reportId   Int      @map("report_id")
+  uploadedBy Int      @map("uploaded_by")
+  imageUrl   String   @map("image_url") @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  report FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [uploadedBy], references: [id])
+
+  @@index([reportId])
+  @@map("report_photos")
+}
+
+model FloodZone {
+  id           Int       @id @default(autoincrement())
+  districtId   Int       @unique @map("district_id")
+  riskLevel    RiskLevel @map("risk_level")
+  avgDepth     Decimal   @default(0) @map("avg_depth") @db.Decimal(6, 2)
+  reportCount  Int       @default(0) @map("report_count")
+  polygonGeojson String? @map("polygon_geojson") @db.LongText
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  district District @relation(fields: [districtId], references: [id])
+
+  @@map("flood_zones")
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  title     String           @db.VarChar(255)
+  message   String           @db.Text
+  type      NotificationType
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}

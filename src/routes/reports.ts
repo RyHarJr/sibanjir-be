@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { body, query } from "express-validator";
 import { prisma } from "../lib/prisma";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { computeSeverity, computeConfidence } from "../lib/scoring";
 import { upload } from "../lib/upload";
@@ -274,6 +274,40 @@ router.post(
     });
 
     res.json({ success: true, message: `Vote '${vote}' berhasil disimpan`, data: { confirms, rejects, confidenceScore: newScore } });
+  }
+);
+
+// ── POST /reports/:id/admin-verify ──────────────────────────────────────────
+router.post(
+  "/:id/admin-verify",
+  authenticate,
+  requireAdmin,
+  [
+    body("action").isIn(["verify", "reject"]).withMessage("Action harus verify atau reject"),
+  ],
+  validate,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const reportId = Number(req.params.id);
+    const { action } = req.body;
+
+    const report = await prisma.floodReport.findUnique({ where: { id: reportId } });
+    if (!report) {
+      res.status(404).json({ success: false, message: "Laporan tidak ditemukan" });
+      return;
+    }
+
+    const newScore = action === "verify" ? 100 : -100;
+    
+    const updated = await prisma.floodReport.update({
+      where: { id: reportId },
+      data: { confidenceScore: newScore },
+    });
+
+    res.json({ 
+      success: true, 
+      message: `Laporan berhasil di${action === "verify" ? "verifikasi" : "tolak"}`, 
+      data: updated 
+    });
   }
 );
 

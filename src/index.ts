@@ -8,6 +8,8 @@ import reportsRouter from "./routes/reports";
 import mapRouter from "./routes/map";
 import notificationsRouter from "./routes/notifications";
 import districtsRouter from "./routes/districts";
+import usersRouter from "./routes/users";
+import weatherRouter from "./routes/weather";
 import { errorHandler, notFound } from "./middleware/error";
 
 const app = express();
@@ -31,6 +33,8 @@ app.use("/reports",       reportsRouter);
 app.use("/map",           mapRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/districts",     districtsRouter);
+app.use("/users",         usersRouter);
+app.use("/weather",       weatherRouter);
 
 // ── Error handling ─────────────────────────────────────────────────────────
 app.use(notFound);

@@ -33,7 +33,7 @@ router.get("/", authenticate, requireAdmin, async (req: AuthRequest, res: Respon
 // PATCH /users/:id/role - Update user role
 router.patch("/:id/role", authenticate, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = parseInt(req.params.id, 10);
+    const userId = parseInt(req.params.id as string, 10);
     const { role } = req.body;
     
     if (role !== "admin" && role !== "user") {

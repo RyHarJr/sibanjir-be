@@ -1,7 +1,7 @@
 {
   "name": "sibanjir-be",
   "version": "1.0.0",
-  "description": "LaporBanjir Palembang - REST API Backend",
+  "description": "SiBanjir Palembang - REST API Backend",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

@@ -22,16 +22,14 @@ router.get("/", [query("status").optional().isIn(["active", "surging", "receded"
 
   const createdAtFilter: Record<string, Date> = {}
   if (dateFrom && typeof dateFrom === "string") {
-    const parsed = new Date(dateFrom)
+    const parsed = new Date(`${dateFrom}T00:00:00+07:00`)
     if (!isNaN(parsed.getTime())) {
-      parsed.setHours(0, 0, 0, 0)
       createdAtFilter.gte = parsed
     }
   }
   if (dateTo && typeof dateTo === "string") {
-    const parsed = new Date(dateTo)
+    const parsed = new Date(`${dateTo}T23:59:59.999+07:00`)
     if (!isNaN(parsed.getTime())) {
-      parsed.setHours(23, 59, 59, 999)
       createdAtFilter.lte = parsed
     }
   }
